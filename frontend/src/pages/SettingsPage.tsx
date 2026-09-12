@@ -1,3 +1,4 @@
+import { ConnectionModal } from '../components/ConnectionModal'
 import { useState } from 'react'
 import { Bell, Check, Loader2, Plug, Settings } from 'lucide-react'
 import { PlatformLogo } from '../components/PlatformLogo'
@@ -13,6 +14,7 @@ export function SettingsPage() {
   const [notifyAlerts, setNotifyAlerts] = useState(true)
   const [saved, setSaved] = useState(false)
   const [busyId, setBusyId] = useState<PlatformId | null>(null)
+  const [modalId, setModalId] = useState<PlatformId | null>(null)
   const [manageNote, setManageNote] = useState('')
 
   function save() {
@@ -21,6 +23,10 @@ export function SettingsPage() {
   }
 
   async function handleConnect(id: PlatformId) {
+    if (['tiktok', 'instagram', 'whatsapp', 'amazon'].includes(id)) {
+      setModalId(id)
+      return
+    }
     setBusyId(id)
     await new Promise((r) => window.setTimeout(r, 900))
     connectPlatform(id)
@@ -36,6 +42,7 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      {modalId && <ConnectionModal id={modalId} onClose={() => setModalId(null)} />}
       <header>
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Settings</p>
         <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">
@@ -127,7 +134,7 @@ export function SettingsPage() {
                       </button>
                       <button
                         type="button"
-                        disabled={busy}
+                        disabled={busyId !== null}
                         onClick={() => handleDisconnect(platform.id)}
                         className="bb-btn px-3 py-2 text-xs font-bold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-70"
                       >
@@ -137,7 +144,7 @@ export function SettingsPage() {
                   ) : (
                     <button
                       type="button"
-                      disabled={busy}
+                      disabled={busyId !== null}
                       onClick={() => handleConnect(platform.id)}
                       className="bb-btn bb-btn-primary px-3 py-2 text-xs disabled:opacity-70"
                     >

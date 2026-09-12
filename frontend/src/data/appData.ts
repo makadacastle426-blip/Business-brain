@@ -370,3 +370,29 @@ export const integrations = platforms.map((p) => ({
   category: p.category,
   connected: false,
 }))
+
+export const instagramAccounts = [
+  { id: 'ig-1', name: 'Lacebybritney Official', handle: '@lacebybritney', followers: '64K' },
+  { id: 'ig-2', name: 'Lacebybritney Shop', handle: '@lacebybritney.shop', followers: '21K' },
+  { id: 'ig-3', name: 'Lacebybritney Studio', handle: '@lacebybritney.studio', followers: '5.2K' },
+]
+
+export const countryCodes = [
+  { country: 'US / Canada', code: '+1' },
+  { country: 'United Kingdom', code: '+44' },
+  { country: 'Vietnam', code: '+84' },
+  { country: 'Nigeria', code: '+234' },
+  { country: 'Ghana', code: '+233' },
+  { country: 'South Africa', code: '+27' },
+  { country: 'India', code: '+91' },
+  { country: 'Australia', code: '+61' },
+  { country: 'Germany', code: '+49' },
+  { country: 'France', code: '+33' },
+  { country: 'Brazil', code: '+55' },
+]
+
+export const amazonMarketplaces = [
+  'amazon.com', 'amazon.co.uk', 'amazon.ca', 'amazon.de', 'amazon.fr',
+  'amazon.it', 'amazon.es', 'amazon.com.au', 'amazon.co.jp', 'amazon.in',
+  'amazon.com.mx', 'amazon.com.br', 'amazon.ae', 'amazon.sg',
+]

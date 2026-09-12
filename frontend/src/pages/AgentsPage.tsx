@@ -21,7 +21,7 @@ export function AgentsPage() {
         {agents.map((agent) => (
           <article
             key={agent.id}
-            className="flex flex-col rounded-2xl bg-white p-5 ring-1 ring-line transition hover:-translate-y-0.5 hover:shadow-md"
+            className="flex flex-col bb-card p-5 sm:p-6 transition hover:-translate-y-0.5 hover:shadow-md"
           >
             <div className="flex items-start justify-between gap-3">
               <span
