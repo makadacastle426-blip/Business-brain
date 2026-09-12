@@ -1,6 +1,6 @@
 import {
   createContext,
-  useCallback,
+  useEffect,
   useContext,
   useMemo,
   useState,
@@ -57,8 +57,20 @@ function readConnections(): ConnectionsState {
   try {
     const raw = localStorage.getItem(CONNECTIONS_KEY)
     if (!raw) return defaultConnections()
-    const parsed = JSON.parse(raw) as Partial<ConnectionsState>
-    return { ...defaultConnections(), ...parsed }
+    const parsed: unknown = JSON.parse(raw)
+    const next = defaultConnections()
+    if (!parsed || typeof parsed !== 'object') return next
+    for (const id of Object.keys(next) as PlatformId[]) {
+      const record = (parsed as Record<string, unknown>)[id]
+      if (record && typeof record === 'object' && 'connected' in record && record.connected === true) {
+        next[id] = {
+          connected: true,
+          accountLabel: 'accountLabel' in record && typeof record.accountLabel === 'string' ? record.accountLabel : undefined,
+          connectedAt: 'connectedAt' in record && typeof record.connectedAt === 'string' ? record.connectedAt : undefined,
+        }
+      }
+    }
+    return next
   } catch {
     return defaultConnections()
   }
@@ -68,10 +80,13 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
   const [connections, setConnections] = useState<ConnectionsState>(() => readConnections())
   const [onboardingComplete, setOnboardingComplete] = useState(() => readOnboardingComplete())
 
-  const persist = useCallback((next: ConnectionsState) => {
-    localStorage.setItem(CONNECTIONS_KEY, JSON.stringify(next))
-    setConnections(next)
-  }, [])
+  useEffect(() => {
+    try {
+      localStorage.setItem(CONNECTIONS_KEY, JSON.stringify(connections))
+    } catch {
+      // Keep the demo usable when browser storage is unavailable.
+    }
+  }, [connections])
 
   const value = useMemo<ConnectionsContextValue>(
     () => ({
@@ -81,22 +96,20 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
         return Boolean(connections[id]?.connected)
       },
       connectPlatform(id, accountLabel) {
-        const next = {
-          ...connections,
+        setConnections((previous) => ({
+          ...previous,
           [id]: {
             connected: true,
             accountLabel,
             connectedAt: new Date().toISOString(),
           },
-        }
-        persist(next)
+        }))
       },
       disconnectPlatform(id) {
-        const next = {
-          ...connections,
+        setConnections((previous) => ({
+          ...previous,
           [id]: { connected: false },
-        }
-        persist(next)
+        }))
       },
       completeOnboarding() {
         localStorage.setItem(ONBOARDING_KEY, '1')
@@ -107,7 +120,7 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
         setOnboardingComplete(false)
       },
     }),
-    [connections, onboardingComplete, persist],
+    [connections, onboardingComplete],
   )
 
   return (
