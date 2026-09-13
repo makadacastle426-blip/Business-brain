@@ -25,7 +25,7 @@ export function PackingStationPage() {
       </header>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
-        <div className="rounded-2xl bg-white p-5 ring-1 ring-line">
+        <div className="bb-card p-5 sm:p-6">
           <div className="mb-4 flex items-center gap-2">
             <ShoppingBag className="h-4 w-4 text-brand" aria-hidden />
             <h2 className="font-display text-lg font-bold">Queue</h2>
@@ -58,7 +58,7 @@ export function PackingStationPage() {
           </ul>
         </div>
 
-        <div className="rounded-2xl bg-white p-5 ring-1 ring-line">
+        <div className="bb-card p-5 sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-lg font-bold">Order #{order.id}</h2>
