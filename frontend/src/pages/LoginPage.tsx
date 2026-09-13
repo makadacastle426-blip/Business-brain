@@ -6,8 +6,8 @@ import { DEMO_USER_EMAIL, useAuth } from '../context/AuthContext'
 import { useConnections } from '../context/ConnectionsContext'
 
 export function LoginPage() {
-  const { isAuthenticated, login, loginWithGoogle } = useAuth()
-  const { resetOnboarding } = useConnections()
+  const { authLoading, isAuthenticated, login, loginWithGoogle, signup } = useAuth()
+  const { resetOnboarding, completeOnboarding } = useConnections()
   const navigate = useNavigate()
   const [email, setEmail] = useState(DEMO_USER_EMAIL)
   const [password, setPassword] = useState('demo')
@@ -17,14 +17,15 @@ export function LoginPage() {
   const [info, setInfo] = useState('')
 
   // Already signed in on /login → always send through Connections (never skip to chat).
-  if (isAuthenticated && !loading) {
+  if (!authLoading && isAuthenticated && !loading) {
     return <Navigate to="/connections" replace />
   }
 
-  /** Every successful login lands on Connections — never Business Chat. */
+  /** Every successful login lands on Business Chat. */
   function redirectAfterLogin() {
     resetOnboarding()
-    navigate('/connections', { replace: true })
+    completeOnboarding()
+    navigate('/business-chat', { replace: true })
   }
 
   async function onSubmit(e: FormEvent) {
@@ -37,12 +38,21 @@ export function LoginPage() {
       return
     }
 
+    if (mode === 'signup' && password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
+
     setLoading(true)
     try {
-      await login(email.trim(), password)
+      if (mode === 'signup') {
+        await signup(email.trim(), password)
+      } else {
+        await login(email.trim(), password)
+      }
       redirectAfterLogin()
-    } catch {
-      setError('Unable to sign in. Please try again.')
+    } catch (cause) {
+      setError(getAuthErrorMessage(cause, mode))
       setLoading(false)
     }
   }
@@ -54,10 +64,30 @@ export function LoginPage() {
     try {
       await loginWithGoogle()
       redirectAfterLogin()
-    } catch {
-      setError('Unable to continue with Google. Please try again.')
+    } catch (cause) {
+      setError(getAuthErrorMessage(cause, 'signin', true))
       setLoading(false)
     }
+  }
+
+  function getAuthErrorMessage(cause: unknown, authMode: 'signin' | 'signup', google = false) {
+    const code = cause instanceof Error && 'code' in cause ? String(cause.code) : ''
+
+    if (code.includes('operation-not-allowed')) {
+      return google
+        ? 'Google sign-in is not enabled in Firebase Authentication.'
+        : 'Email/password sign-in is not enabled in Firebase Authentication.'
+    }
+    if (code.includes('invalid-credential') || code.includes('user-not-found') || code.includes('wrong-password')) {
+      return 'Incorrect email or password.'
+    }
+    if (code.includes('email-already-in-use')) return 'An account already exists for this email.'
+    if (code.includes('invalid-email')) return 'Enter a valid email address.'
+    if (code.includes('weak-password')) return 'Password must be at least 6 characters.'
+    if (code.includes('popup-closed-by-user')) return 'The Google sign-in window was closed.'
+    return authMode === 'signup'
+      ? 'Unable to create the account. Check Firebase Authentication settings.'
+      : 'Unable to sign in. Check the email, password, and Firebase Authentication settings.'
   }
 
   return (
