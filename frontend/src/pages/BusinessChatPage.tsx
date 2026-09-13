@@ -123,13 +123,13 @@ export function BusinessChatPage() {
     pushReply(text)
   }
 
-  function handleSuggestion(label: string) {
+  function useSuggestion(label: string) {
     setInput(label)
     pushReply(label)
   }
 
   return (
-    <div className="flex h-[calc(100dvh-7rem)] lg:h-[calc(100dvh-8rem)] min-h-[32rem] flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-[var(--shadow-soft)] ring-1 ring-line">
+    <div className="flex h-[calc(100vh-5.5rem)] min-h-[32rem] flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-[var(--shadow-soft)] ring-1 ring-line">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line/80 bg-gradient-to-r from-white to-surface/60 px-4 py-3.5 sm:px-5">
         <div>
           <div className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export function BusinessChatPage() {
                   <button
                     key={s.label}
                     type="button"
-                    onClick={() => handleSuggestion(s.label)}
+                    onClick={() => useSuggestion(s.label)}
                     className="bb-card bb-card-interactive flex items-center gap-3 px-4 py-3 text-left"
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">

@@ -1,23 +1,28 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Check, Loader2 } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, X } from 'lucide-react'
 import { BrandLogo } from '../components/BrandLogo'
 import { PlatformLogo } from '../components/PlatformLogo'
 import { useAuth } from '../context/AuthContext'
 import { useConnections } from '../context/ConnectionsContext'
-import { platforms, type PlatformId } from '../data/appData'
+import { platforms, tiktokAccounts, type PlatformId } from '../data/appData'
 
-import { ConnectionModal } from '../components/ConnectionModal'
+type TikTokStep = 'accounts' | 'connecting' | 'done'
 
 export function ConnectionsPage() {
   const { isAuthenticated } = useAuth()
   const { connections, isConnected, connectPlatform, completeOnboarding } = useConnections()
   const navigate = useNavigate()
-  const [modalId, setModalId] = useState<PlatformId | null>(null)
+  const [tiktokOpen, setTiktokOpen] = useState(false)
+  const [tiktokStep, setTiktokStep] = useState<TikTokStep>('accounts')
+  const [selectedAccount, setSelectedAccount] = useState(tiktokAccounts[0]?.id ?? '')
   const [busyId, setBusyId] = useState<PlatformId | null>(null)
   const [toast, setToast] = useState('')
 
-  const connectedCount = platforms.filter((platform) => isConnected(platform.id)).length
+  const connectedCount = useMemo(
+    () => platforms.filter((p) => isConnected(p.id)).length,
+    [connections, isConnected],
+  )
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
 
@@ -28,8 +33,10 @@ export function ConnectionsPage() {
 
   function openConnect(id: PlatformId) {
     if (isConnected(id)) return
-    if (['tiktok', 'instagram', 'whatsapp', 'amazon'].includes(id)) {
-      setModalId(id)
+    if (id === 'tiktok') {
+      setSelectedAccount(tiktokAccounts[0]?.id ?? '')
+      setTiktokStep('accounts')
+      setTiktokOpen(true)
       return
     }
     void simulateConnect(id)
@@ -43,13 +50,26 @@ export function ConnectionsPage() {
     showToast(`${platforms.find((p) => p.id === id)?.name ?? 'App'} connected`)
   }
 
+  async function continueTikTok() {
+    const account = tiktokAccounts.find((a) => a.id === selectedAccount)
+    if (!account) return
+    setTiktokStep('connecting')
+    await new Promise((r) => window.setTimeout(r, 1600))
+    connectPlatform('tiktok', `${account.name} (${account.handle})`)
+    setTiktokStep('done')
+    await new Promise((r) => window.setTimeout(r, 700))
+    setTiktokOpen(false)
+    setTiktokStep('accounts')
+    showToast('TikTok connected')
+  }
+
   function goToApp() {
     completeOnboarding()
     navigate('/business-chat', { replace: true })
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-[#fbfcfe]">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -59,7 +79,7 @@ export function ConnectionsPage() {
               <p className="text-sm text-muted">Connect your business platforms</p>
             </div>
           </div>
-          <p role="status" className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-muted ring-1 ring-line">
+          <p className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-muted ring-1 ring-line">
             {connectedCount} of {platforms.length} connected
           </p>
         </header>
@@ -74,7 +94,7 @@ export function ConnectionsPage() {
           </p>
         </div>
 
-        <div className="bb-page-enter mt-8 space-y-4">
+        <div className="bb-page-enter mt-8 space-y-3">
           {platforms.map((platform) => {
             const connected = isConnected(platform.id)
             const busy = busyId === platform.id
@@ -117,7 +137,7 @@ export function ConnectionsPage() {
 
                 <button
                   type="button"
-                  disabled={connected || busyId !== null}
+                  disabled={connected || busy}
                   onClick={() => openConnect(platform.id)}
                   className={`bb-btn w-full shrink-0 px-5 py-2.5 sm:w-36 ${
                     connected
@@ -131,7 +151,7 @@ export function ConnectionsPage() {
                       Connecting…
                     </>
                   ) : connected ? (
-                    <><Check className="h-4 w-4" aria-hidden />Connected</>
+                    '✓ Connected'
                   ) : (
                     'Connect'
                   )}
@@ -167,9 +187,112 @@ export function ConnectionsPage() {
         </div>
       )}
 
-      {modalId && (
-        <ConnectionModal id={modalId} onClose={() => setModalId(null)}
-          onConnected={() => showToast(`${platforms.find((p) => p.id === modalId)?.name} connected`)} />
+      {tiktokOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center">
+          <div
+            className="absolute inset-0"
+            onClick={() => tiktokStep !== 'connecting' && setTiktokOpen(false)}
+            aria-hidden
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tiktok-connect-title"
+            className="relative z-10 w-full max-w-md rounded-2xl bg-white p-5 shadow-xl sm:p-6"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">TikTok</p>
+                <h2 id="tiktok-connect-title" className="mt-1 font-display text-xl font-bold text-ink">
+                  {tiktokStep === 'accounts' && 'Choose a TikTok page'}
+                  {tiktokStep === 'connecting' && 'Connecting TikTok'}
+                  {tiktokStep === 'done' && 'TikTok connected'}
+                </h2>
+              </div>
+              {tiktokStep !== 'connecting' && (
+                <button
+                  type="button"
+                  className="rounded-lg p-2 text-muted hover:bg-surface"
+                  aria-label="Close"
+                  onClick={() => setTiktokOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {tiktokStep === 'accounts' && (
+              <>
+                <p className="text-sm text-muted">
+                  Select which TikTok account you want Business Brain to use for Lacebybritney.
+                </p>
+                <ul className="mt-4 space-y-2">
+                  {tiktokAccounts.map((account) => {
+                    const selected = selectedAccount === account.id
+                    return (
+                      <li key={account.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAccount(account.id)}
+                          className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left ring-1 transition ${
+                            selected
+                              ? 'bg-brand/5 ring-brand'
+                              : 'bg-white ring-line hover:bg-surface'
+                          }`}
+                        >
+                          <span>
+                            <span className="block text-sm font-bold text-ink">{account.name}</span>
+                            <span className="block text-xs text-muted">
+                              {account.handle} · {account.followers} followers
+                            </span>
+                          </span>
+                          {selected && (
+                            <Check className="h-4 w-4 text-brand" aria-hidden />
+                          )}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <div className="mt-5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTiktokOpen(false)}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-surface px-4 py-3 text-sm font-semibold text-ink ring-1 ring-line"
+                  >
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={continueTikTok}
+                    className="inline-flex flex-1 items-center justify-center rounded-xl bg-brand px-4 py-3 text-sm font-bold text-white hover:bg-brand-dark"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            )}
+
+            {tiktokStep === 'connecting' && (
+              <div className="flex flex-col items-center py-10 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden />
+                <p className="mt-4 text-sm font-semibold text-ink">Authorizing TikTok…</p>
+                <p className="mt-1 text-xs text-muted">Syncing account permissions and shop data</p>
+              </div>
+            )}
+
+            {tiktokStep === 'done' && (
+              <div className="flex flex-col items-center py-8 text-center">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <Check className="h-6 w-6" aria-hidden />
+                </span>
+                <p className="mt-4 text-sm font-semibold text-ink">Connection complete</p>
+                <p className="mt-1 text-xs text-muted">Returning to Connections…</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

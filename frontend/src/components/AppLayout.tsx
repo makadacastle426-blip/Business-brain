@@ -125,7 +125,7 @@ export function AppLayout() {
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         <aside
           className={[
-            'hidden shrink-0 flex-col overflow-hidden border-r border-line bg-surface transition-[width,padding] duration-200 ease-out lg:flex',
+            'hidden shrink-0 flex-col overflow-hidden border-r border-line bg-[#fbfcfe] transition-[width,padding] duration-200 ease-out lg:flex',
             desktopOpen ? 'w-72 px-4 py-5' : 'w-0 border-r-0 px-0 py-0',
           ].join(' ')}
           aria-hidden={!desktopOpen}
@@ -134,7 +134,7 @@ export function AppLayout() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-line/80 bg-surface/90 px-4 py-3 backdrop-blur-md sm:px-6">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-line/80 bg-[#fbfcfe]/90 px-4 py-3 backdrop-blur-md sm:px-6">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -177,7 +177,7 @@ export function AppLayout() {
             </div>
           </header>
 
-          <main className="bb-page-enter mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <main className="bb-page-enter flex-1 px-3 py-4 sm:px-6 lg:px-8">
             <Outlet />
           </main>
         </div>
@@ -191,7 +191,7 @@ export function AppLayout() {
             aria-label="Close navigation overlay"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 flex w-[min(20rem,88vw)] flex-col bg-surface p-4 shadow-2xl">
+          <div className="absolute inset-y-0 left-0 flex w-[min(20rem,88vw)] flex-col bg-[#fbfcfe] p-4 shadow-2xl">
             <div className="mb-2 flex justify-end">
               <button
                 type="button"

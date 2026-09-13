@@ -81,7 +81,7 @@ export function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon
           return (
-            <div key={stat.label} className="bb-card p-5 sm:p-6">
+            <div key={stat.label} className="rounded-2xl bg-white p-5 ring-1 ring-line">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-muted">{stat.label}</p>
                 <Icon className="h-4 w-4 text-brand" aria-hidden />
@@ -94,7 +94,7 @@ export function DashboardPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="bb-card p-5 sm:p-6">
+        <div className="rounded-2xl bg-white p-5 ring-1 ring-line">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Agent pulse</h2>
             <TrendingUp className="h-4 w-4 text-brand" aria-hidden />
@@ -127,7 +127,7 @@ export function DashboardPage() {
           </ul>
         </div>
 
-        <div className="bb-card p-5 sm:p-6">
+        <div className="rounded-2xl bg-white p-5 ring-1 ring-line">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Needs attention</h2>
             <AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden />

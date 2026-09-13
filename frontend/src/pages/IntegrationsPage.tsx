@@ -23,7 +23,7 @@ export function IntegrationsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
-          <article key={item.id} className="bb-card p-5 sm:p-6">
+          <article key={item.id} className="rounded-2xl bg-white p-5 ring-1 ring-line">
             <div className="flex items-start justify-between gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface ring-1 ring-line">
                 <Plug className="h-4 w-4 text-brand" aria-hidden />
