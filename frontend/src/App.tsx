@@ -11,7 +11,8 @@ import { SubscriptionPage } from './pages/SubscriptionPage'
 import { TeamMembersPage } from './pages/TeamMembersPage'
 
 function ProtectedRoute() {
-  const { isAuthenticated } = useAuth()
+  const { authLoading, isAuthenticated } = useAuth()
+  if (authLoading) return null
   if (!isAuthenticated) return <Navigate to="/login" replace />
   return <Outlet />
 }
@@ -51,8 +52,9 @@ export default function App() {
 }
 
 function RootRedirect() {
-  const { isAuthenticated } = useAuth()
+  const { authLoading, isAuthenticated } = useAuth()
   const { onboardingComplete } = useConnections()
+  if (authLoading) return null
   if (!isAuthenticated) return <Navigate to="/login" replace />
   // Authenticated users always hit Connections until they Continue this session.
   if (!onboardingComplete) return <Navigate to="/connections" replace />
