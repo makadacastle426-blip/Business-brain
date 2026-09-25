@@ -190,9 +190,24 @@ export type BusinessTask = {
   action: string
   meta?: string
   done?: boolean
+  workflow?: 'print-label'
 }
 
 export const businessTasksSeed: BusinessTask[] = [
+  {
+    id: 'amazon-print-1024',
+    type: 'order',
+    title: 'Amazon order #1024',
+    customer: 'Shamara',
+    product: 'Two-Tier Bicycle',
+    amount: '$320.00 USD cleared',
+    source: 'Amazon Seller US Central',
+    status: 'Awaiting shipment',
+    priority: 'high',
+    action: 'Wireless Print Label',
+    meta: 'Payment cleared. Pack the order, then print its shipping label.',
+    workflow: 'print-label',
+  },
   {
     id: 'bt1',
     type: 'order',

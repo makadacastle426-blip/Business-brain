@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   CreditCard,
+  Printer,
   Package,
   ShoppingBag,
   Sparkles,
@@ -39,6 +40,7 @@ export function SmartTodoPage() {
   const [completeFlash, setCompleteFlash] = useState('')
   const [slideKey, setSlideKey] = useState(0)
   const [exiting, setExiting] = useState(false)
+  const [printStages, setPrintStages] = useState<Record<string, 'ready' | 'printed' | 'sent' | 'skipped'>>({})
 
   const queue = useMemo(
     () => items.filter((t) => !t.done && matchesFilter(t, filter)),
@@ -68,6 +70,10 @@ export function SmartTodoPage() {
       setSlideKey((k) => k + 1)
       setCompleteFlash('')
     }, 320)
+  }
+
+  function updatePrintStage(taskId: string, stage: 'printed' | 'sent' | 'skipped') {
+    setPrintStages((prev) => ({ ...prev, [taskId]: stage }))
   }
 
   return (
@@ -120,6 +126,8 @@ export function SmartTodoPage() {
               task={current}
               onAction={() => runAction(current)}
               onComplete={completeCurrent}
+              printStage={printStages[current.id] ?? 'ready'}
+              onPrintStage={(stage) => updatePrintStage(current.id, stage)}
               primary
             />
           </div>
@@ -133,6 +141,8 @@ export function SmartTodoPage() {
                   task={task}
                   onAction={() => runAction(task)}
                   onComplete={() => {}}
+                  printStage={printStages[task.id] ?? 'ready'}
+                  onPrintStage={(stage) => updatePrintStage(task.id, stage)}
                   compact
                 />
               ))}
@@ -178,12 +188,16 @@ function TaskCard({
   onComplete,
   primary,
   compact,
+  printStage,
+  onPrintStage,
 }: {
   task: BusinessTask
   onAction: () => void
   onComplete: () => void
   primary?: boolean
   compact?: boolean
+  printStage: 'ready' | 'printed' | 'sent' | 'skipped'
+  onPrintStage: (stage: 'printed' | 'sent' | 'skipped') => void
 }) {
   const Icon = typeIcon[task.type]
 
@@ -212,11 +226,11 @@ function TaskCard({
       </div>
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand ring-1 ring-brand/15">
               <Icon className="h-5 w-5" aria-hidden />
             </span>
-            <div>
+            <div className="min-w-0">
               <h2 className="font-display text-xl font-bold text-ink">{task.title}</h2>
               <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-muted">
                 {task.source}
@@ -265,7 +279,9 @@ function TaskCard({
             <dt className="w-24 shrink-0 font-semibold text-muted">Status</dt>
             <dd className="inline-flex items-center gap-1.5 font-semibold text-ink">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500" aria-hidden />
-              {task.status}
+              {task.workflow === 'print-label' && printStage !== 'ready'
+                ? printStage === 'printed' ? 'Label printed' : printStage === 'sent' ? 'Tracking link sent' : 'Tracking link skipped'
+                : task.status}
             </dd>
           </div>
           {task.meta && (
@@ -276,16 +292,44 @@ function TaskCard({
           )}
         </dl>
 
-        <div className="mt-6 flex flex-wrap gap-2">
-          <button type="button" onClick={onAction} className="bb-btn bb-btn-secondary px-4 py-2.5">
-            {task.action}
-          </button>
-          {primary && (
-            <button type="button" onClick={onComplete} className="bb-btn bb-btn-primary px-4 py-2.5">
-              Complete
-            </button>
-          )}
-        </div>
+        {task.workflow === 'print-label' ? (
+          <div className="mt-6 rounded-2xl border border-brand/15 bg-brand/5 p-4" aria-live="polite">
+            {printStage === 'ready' ? (
+              <>
+                <p className="text-sm font-semibold text-ink">Package ready? Print the shipping label to continue.</p>
+                <p className="mt-1 text-xs text-muted">Demo flow: printing is simulated; no printer or courier is contacted.</p>
+                <button type="button" onClick={() => onPrintStage('printed')} className="bb-btn bb-btn-primary mt-4 px-4 py-2.5">
+                  <Printer className="h-4 w-4" aria-hidden /> Wireless Print Label
+                </button>
+              </>
+            ) : printStage === 'printed' ? (
+              <>
+                <p className="text-sm font-semibold text-ink">Label printed. Would you like to send Shamara her tracking link now?</p>
+                <p className="mt-1 text-xs text-muted">This demo simulates the message and tracking update.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => onPrintStage('sent')} className="bb-btn bb-btn-primary px-4 py-2.5">Yes, send</button>
+                  <button type="button" onClick={() => onPrintStage('skipped')} className="bb-btn bb-btn-secondary px-4 py-2.5">No, skip</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden />
+                  {printStage === 'sent' ? 'Tracking link sent to Shamara (demo).' : 'Label printed; tracking link not sent.'}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {printStage === 'skipped' && <button type="button" onClick={() => onPrintStage('sent')} className="bb-btn bb-btn-secondary px-4 py-2.5">Send link now</button>}
+                  {primary && <button type="button" onClick={onComplete} className="bb-btn bb-btn-primary px-4 py-2.5">Complete task</button>}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="mt-6 flex flex-wrap gap-2">
+            <button type="button" onClick={onAction} className="bb-btn bb-btn-secondary px-4 py-2.5">{task.action}</button>
+            {primary && <button type="button" onClick={onComplete} className="bb-btn bb-btn-primary px-4 py-2.5">Complete</button>}
+          </div>
+        )}
       </div>
     </article>
   )
