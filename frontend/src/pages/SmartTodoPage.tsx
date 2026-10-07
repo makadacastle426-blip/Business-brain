@@ -11,6 +11,44 @@ import {
   Users,
 } from 'lucide-react'
 import { businessTasksSeed, type BusinessTask } from '../data/appData'
+import { useAuth } from '../context/AuthContext'
+
+type PrintStage = 'ready' | 'printed' | 'sent' | 'skipped'
+type SavedProgress = {
+  doneIds: string[]
+  printStages: Record<string, PrintStage>
+}
+
+const TODO_STORAGE_PREFIX = 'business-brain-todo-v1:'
+const printStageValues = new Set<PrintStage>(['printed', 'sent', 'skipped'])
+
+function readProgress(email: string): SavedProgress {
+  const empty: SavedProgress = { doneIds: [], printStages: {} }
+  if (!email) return empty
+  try {
+    const raw = localStorage.getItem(`${TODO_STORAGE_PREFIX}${email.toLowerCase()}`)
+    if (!raw) return empty
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return empty
+    const value = parsed as Record<string, unknown>
+    const knownIds = new Set(businessTasksSeed.map((task) => task.id))
+    const printIds = new Set(businessTasksSeed.filter((task) => task.workflow === 'print-label').map((task) => task.id))
+    const doneIds = Array.isArray(value.doneIds)
+      ? value.doneIds.filter((id): id is string => typeof id === 'string' && knownIds.has(id))
+      : []
+    const printStages: Record<string, PrintStage> = {}
+    if (value.printStages && typeof value.printStages === 'object' && !Array.isArray(value.printStages)) {
+      for (const [id, stage] of Object.entries(value.printStages)) {
+        if (printIds.has(id) && printStageValues.has(stage as PrintStage)) {
+          printStages[id] = stage as PrintStage
+        }
+      }
+    }
+    return { doneIds, printStages }
+  } catch {
+    return empty
+  }
+}
 
 const typeIcon = {
   order: ShoppingBag,
@@ -34,13 +72,33 @@ function matchesFilter(task: BusinessTask, filter: (typeof filters)[number]) {
 }
 
 export function SmartTodoPage() {
-  const [items, setItems] = useState(businessTasksSeed)
+  const { user } = useAuth()
+  return <TodoContent key={user?.email ?? 'guest'} email={user?.email ?? ''} />
+}
+
+function TodoContent({ email }: { email: string }) {
+  const [savedProgress] = useState(() => readProgress(email))
+  const [items, setItems] = useState(() =>
+    businessTasksSeed.map((task) => ({ ...task, done: savedProgress.doneIds.includes(task.id) })),
+  )
   const [filter, setFilter] = useState<(typeof filters)[number]>('All')
   const [actionNote, setActionNote] = useState('')
   const [completeFlash, setCompleteFlash] = useState('')
   const [slideKey, setSlideKey] = useState(0)
   const [exiting, setExiting] = useState(false)
-  const [printStages, setPrintStages] = useState<Record<string, 'ready' | 'printed' | 'sent' | 'skipped'>>({})
+  const [printStages, setPrintStages] = useState<Record<string, PrintStage>>(savedProgress.printStages)
+
+  useEffect(() => {
+    if (!email) return
+    try {
+      localStorage.setItem(`${TODO_STORAGE_PREFIX}${email.toLowerCase()}`, JSON.stringify({
+        doneIds: items.filter((task) => task.done).map((task) => task.id),
+        printStages,
+      }))
+    } catch {
+      // Keep the demo usable when browser storage is unavailable.
+    }
+  }, [email, items, printStages])
 
   const queue = useMemo(
     () => items.filter((t) => !t.done && matchesFilter(t, filter)),
@@ -72,7 +130,7 @@ export function SmartTodoPage() {
     }, 320)
   }
 
-  function updatePrintStage(taskId: string, stage: 'printed' | 'sent' | 'skipped') {
+  function updatePrintStage(taskId: string, stage: Exclude<PrintStage, 'ready'>) {
     setPrintStages((prev) => ({ ...prev, [taskId]: stage }))
   }
 
@@ -196,8 +254,8 @@ function TaskCard({
   onComplete: () => void
   primary?: boolean
   compact?: boolean
-  printStage: 'ready' | 'printed' | 'sent' | 'skipped'
-  onPrintStage: (stage: 'printed' | 'sent' | 'skipped') => void
+  printStage: PrintStage
+  onPrintStage: (stage: Exclude<PrintStage, 'ready'>) => void
 }) {
   const Icon = typeIcon[task.type]
 
