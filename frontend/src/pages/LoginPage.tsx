@@ -2,15 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { BrandLogo } from '../components/BrandLogo'
-import { DEMO_USER_EMAIL, useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
 import { useConnections } from '../context/ConnectionsContext'
 
 export function LoginPage() {
   const { authLoading, isAuthenticated, login, loginWithGoogle, signup } = useAuth()
   const { resetOnboarding, completeOnboarding } = useConnections()
   const navigate = useNavigate()
-  const [email, setEmail] = useState(DEMO_USER_EMAIL)
-  const [password, setPassword] = useState('demo')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [error, setError] = useState('')
@@ -81,6 +81,10 @@ export function LoginPage() {
     if (code.includes('invalid-credential') || code.includes('user-not-found') || code.includes('wrong-password')) {
       return 'Incorrect email or password.'
     }
+    if (code.includes('unauthorized-domain')) return 'This domain is not allowed by Firebase. Open http://localhost:5173 or ask the project owner to authorize this domain.'
+    if (code.includes('popup-blocked')) return 'Allow the Google sign-in popup, then try again.'
+    if (code.includes('network-request-failed')) return 'Could not reach Firebase. Check your connection and try again.'
+    if (code.includes('too-many-requests')) return 'Too many sign-in attempts. Please wait before trying again.'
     if (code.includes('email-already-in-use')) return 'An account already exists for this email.'
     if (code.includes('invalid-email')) return 'Enter a valid email address.'
     if (code.includes('weak-password')) return 'Password must be at least 6 characters.'
