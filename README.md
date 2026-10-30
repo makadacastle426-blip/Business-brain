@@ -8,6 +8,10 @@ Built for the [Next Founders Hackathon](https://next-founders.devpost.com/).
 
 ![To-Do List shipping flow](docs/todo-shipping-flow.png)
 
+## Local AI chat with OpenRouter
+
+Business Chat can now call OpenRouter through a local Node backend. See [backend setup](backend/README.md). Put your key in `backend/.env`, start the backend with `npm start`, and run Vite in a second terminal. This integration uses sample business tasks and does not execute platform actions. The prototype descriptions below document the earlier hackathon version.
+
 ## The problem
 
 Small online sellers run their business across many apps: TikTok and Instagram for marketing, Amazon and Shopify for orders, WhatsApp and Gmail for customers, and Stripe for payments. Switching between them all day makes it easy to miss a follow-up or ship an order late. Business Brain gives a solo merchant or small team one place to see what needs attention and act on it.

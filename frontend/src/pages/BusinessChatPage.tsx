@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import {
   BarChart3,
   Check,
@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { agents, type AgentId } from '../data/appData'
+import { agents, businessTasksSeed, type AgentId } from '../data/appData'
 
 type Message = {
   id: string
@@ -58,6 +58,8 @@ export function BusinessChatPage() {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>(starter)
   const [thinking, setThinking] = useState(false)
+  const [chatError, setChatError] = useState('')
+  const requestPending = useRef(false)
 
   const selectedAgents = useMemo(
     () => agents.filter((a) => selected.includes(a.id)),
@@ -84,48 +86,58 @@ export function BusinessChatPage() {
     })
   }
 
-  function pushReply(text: string) {
+  async function pushReply(text: string) {
+    if (requestPending.current) return
     if (selectedAgents.length === 0) {
       setLimitMsg('Select at least one agent to chat.')
       setPickerOpen(true)
       return
     }
-
+    if (text.length > 4000) {
+      setChatError('Please keep your message under 4000 characters.')
+      return
+    }
     const lead = selectedAgents[0]
-    const teamLabel = selectedAgents.map((a) => a.title).join(', ')
     const now = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-
-    setMessages((prev) => [
-      ...prev,
-      { id: `u-${Date.now()}`, role: 'user', text, time: now },
-    ])
+    const nextMessages: Message[] = [...messages, { id: crypto.randomUUID(), role: 'user', text, time: now }]
+    requestPending.current = true
+    setMessages(nextMessages)
+    setInput('')
+    setChatError('')
     setThinking(true)
-    window.setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `a-${Date.now()}`,
-          role: 'agent',
-          agentId: lead.id,
-          text: `${lead.title} here (with ${teamLabel}). For “${text}”, I’ll coordinate next steps and surface any related to-dos.`,
-          time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        },
-      ])
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agents: selectedAgents.map((agent) => agent.id),
+          tasks: businessTasksSeed,
+          messages: nextMessages.slice(1).slice(-20).map((message) => ({ role: message.role === 'user' ? 'user' : 'assistant', content: message.text })),
+        }),
+        signal: AbortSignal.timeout(55000),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Unable to get an AI reply.')
+      if (typeof result.reply !== 'string' || !result.reply.trim()) throw new Error('The AI returned an empty reply.')
+      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'agent', agentId: lead.id, text: result.reply, time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }])
+    } catch (error) {
+      setMessages(messages)
+      setInput(text)
+      setChatError(error instanceof Error && error.name !== 'TypeError' && error.name !== 'TimeoutError' ? error.message : 'Could not reach the AI service. Check that the backend is running, then try again.')
+    } finally {
+      requestPending.current = false
       setThinking(false)
-    }, 650)
+    }
   }
 
   function send(e: FormEvent) {
     e.preventDefault()
     const text = input.trim()
-    if (!text) return
-    setInput('')
-    pushReply(text)
+    if (text) void pushReply(text)
   }
 
   function handleSuggestion(label: string) {
-    setInput(label)
-    pushReply(label)
+    void pushReply(label)
   }
 
   return (
@@ -274,6 +286,7 @@ export function BusinessChatPage() {
                     key={s.label}
                     type="button"
                     onClick={() => handleSuggestion(s.label)}
+                    disabled={thinking}
                     className="bb-card bb-card-interactive flex items-center gap-3 px-4 py-3 text-left"
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">
@@ -303,7 +316,7 @@ export function BusinessChatPage() {
                     {agent.title}
                   </p>
                 )}
-                <p>{m.text}</p>
+                <p className="whitespace-pre-wrap">{m.text}</p>
                 <p className={`mt-2 text-[11px] ${isUser ? 'text-teal-100' : 'text-muted'}`}>
                   {m.time}
                 </p>
@@ -325,6 +338,8 @@ export function BusinessChatPage() {
       </div>
 
       <form onSubmit={send} className="border-t border-line/80 bg-white p-4 sm:p-5">
+        {chatError && <p className="mb-2 text-sm text-rose-700" role="alert">{chatError}</p>}
+        <p className="mb-2 text-xs text-muted">AI uses sample business tasks. Verify suggestions before acting.</p>
         {limitMsg && !pickerOpen && (
           <p className="mb-2 text-xs font-semibold text-amber-700" role="status">
             {limitMsg}
@@ -335,12 +350,15 @@ export function BusinessChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             rows={2}
+            disabled={thinking}
+            maxLength={4000}
             placeholder="Message your AI business agents…"
             className="max-h-32 min-h-[2.75rem] w-full resize-y bg-transparent px-2 py-2 text-sm outline-none"
             aria-label="Message"
           />
           <button
             type="submit"
+            disabled={thinking || !input.trim()}
             className="bb-btn bb-btn-primary shrink-0 px-4 py-2.5"
           >
             <Send className="h-4 w-4" aria-hidden />

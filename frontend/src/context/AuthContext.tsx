@@ -66,6 +66,22 @@ function readStoredPlan(): PlanId {
   return 'free'
 }
 
+// Profile persistence is optional for authentication and must not block entry.
+async function syncUserProfile(firebaseUser: FirebaseUser) {
+  try {
+    const profile = doc(firebaseDb, 'users', firebaseUser.uid)
+    const existing = await getDoc(profile)
+    if (!existing.exists()) {
+      await setDoc(profile, {
+        ...toUser(firebaseUser),
+        createdAt: new Date().toISOString(),
+      })
+    }
+  } catch {
+    console.warn('Signed in, but the user profile could not be synced to Firestore.')
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
@@ -96,29 +112,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       async login(email: string, password: string) {
         const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password)
-        // Fetch/create user data in Firestore
-        const userDoc = await getDoc(doc(firebaseDb, 'users', userCredential.user.uid))
-        if (!userDoc.exists()) {
-          await setDoc(doc(firebaseDb, 'users', userCredential.user.uid), {
-            name: userCredential.user.displayName || email.split('@')[0],
-            email: email,
-            role: 'Owner',
-            business: DEMO_BUSINESS,
-            createdAt: new Date().toISOString(),
-          })
-        }
+        void syncUserProfile(userCredential.user)
         return true
       },
       async signup(email: string, password: string) {
         const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password)
-        // Save user data to Firestore
-        await setDoc(doc(firebaseDb, 'users', userCredential.user.uid), {
-          name: email.split('@')[0],
-          email: email,
-          role: 'Owner',
-          business: DEMO_BUSINESS,
-          createdAt: new Date().toISOString(),
-        })
+        void syncUserProfile(userCredential.user)
         return true
       },
       async loginWithGoogle() {
